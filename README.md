@@ -9,11 +9,17 @@ On an Apple Silicon Mac:
 
     # Install anaconda
     # https://www.anaconda.com/download/success
+    # curl -O https://repo.anaconda.com/miniconda/Miniconda3-latest-MacOSX-arm64.sh
+    # sh Miniconda3-latest-MacOSX-arm64.sh
 
     # Clone ACT from tjacobs
     cd ~/Documents/GitHub/
     git clone https://github.com/tjacobs/act.git
     cd act
+
+    # PyTorch for metal
+    conda install pytorch torchvision torchaudio -c pytorch-nightly
+    
 
 # Overview:
 This repo contains the implementation of ACT, together with 2 simulated environments:
