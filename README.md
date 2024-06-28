@@ -4,17 +4,16 @@
 
 On an Apple Silicon Mac:
 
-# Install brew
-/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+    # Install brew
+    /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 
-# Install anaconda
-# https://www.anaconda.com/download/success
+    # Install anaconda
+    # https://www.anaconda.com/download/success
 
-# Clone ACT from tjacobs
-cd ~/Documents/GitHub/
-git clone https://github.com/tjacobs/act.git
-cd act
-
+    # Clone ACT from tjacobs
+    cd ~/Documents/GitHub/
+    git clone https://github.com/tjacobs/act.git
+    cd act
 
 # Overview:
 This repo contains the implementation of ACT, together with 2 simulated environments:
