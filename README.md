@@ -1,10 +1,22 @@
 # ACT: Action Chunking with Transformers
 
-### *New*: [ACT tuning tips](https://docs.google.com/document/d/1FVIZfoALXg_ZkYKaYVh-qOlaXveq5CtvJHXkY25eYhs/edit?usp=sharing)
-TL;DR: if your ACT policy is jerky or pauses in the middle of an episode, just train for longer! Success rate and smoothness can improve way after loss plateaus.
+### Easy to follow steps
 
-#### Project Website: https://tonyzhaozh.github.io/aloha/
+On an Apple Silicon Mac:
 
+# Install brew
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+
+# Install anaconda
+# https://www.anaconda.com/download/success
+
+# Clone ACT from tjacobs
+cd ~/Documents/GitHub/
+git clone https://github.com/tjacobs/act.git
+cd act
+
+
+# Overview:
 This repo contains the implementation of ACT, together with 2 simulated environments:
 Transfer Cube and Bimanual Insertion. You can train and evaluate ACT in sim or real.
 For real, you would also need to install [ALOHA](https://github.com/tonyzhaozh/aloha).

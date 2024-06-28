@@ -4,9 +4,10 @@
 # Install anaconda
 # https://www.anaconda.com/download/success
 
-# Clone ACT
+# Clone ACT from tjacobs
 cd ~/Documents/GitHub/
-git clone https://github.com/tonyzhaozh/act.git
+git clone https://github.com/tjacobs/act.git
+cd act
 
 # Create python 3.8.10 env
 conda config --append channels conda-forge
@@ -26,10 +27,14 @@ pip install einops
 pip install packaging
 pip install h5py
 pip install ipython
-cd act/detr && pip install -e .
+cd detr && pip install -e .
 
 # Generate training runs
-python3 record_sim_episodes.py --task_name sim_transfer_cube_scripted --dataset_dir data --num_episodes 2 --onscreen_render 
+python3 record_sim_episodes.py --task_name sim_transfer_cube_scripted --dataset_dir data/sim_transfer_cube_scripted --num_episodes 2 --onscreen_render 
+
+# Update
+vi constants.py
+# Update data dir to data
 
 # Train
 python3 imitate_episodes.py    --task_name sim_transfer_cube_scripted --ckpt_dir checkpoints --policy_class ACT --kl_weight 10 --chunk_size 100 --hidden_dim 512 --batch_size 8 --dim_feedforward 3200 --num_epochs 2000 --lr 1e-5 --seed 0
