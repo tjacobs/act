@@ -1,6 +1,6 @@
 # ACT: Action Chunking with Transformers
 
-# Overview
+### Overview
 This repo contains the implementation of ACT, Action Chunking with Transformers.
 Training robot arms to perform tasks.
 
@@ -62,15 +62,24 @@ On an Apple Silicon Mac:
 ### Tips
 
 Other task: sim_insertion_scripted
+
 To vizualize:
     python3 visualize_episodes.py --dataset_dir <data save dir> --episode_idx 0
+
 The success rate should be around 90% for transfer cube, and around 50% for insertion.
+
 To enable temporal ensembling, add flag ``--temporal_agg``.
+
 Videos will be saved to ``checkpoints`` for each rollout.
+
 You can also add ``--onscreen_render`` to see real-time rendering during evaluation.
+
 For real-world, train for at least 5000 epochs or 3-4 times the length after the loss has plateaued.
+
 Refer to [tuning tips](https://docs.google.com/document/d/1FVIZfoALXg_ZkYKaYVh-qOlaXveq5CtvJHXkY25eYhs/edit?usp=sharing).
+
 For real, you would also need to install [ALOHA](https://github.com/tonyzhaozh/aloha).
+
 You can find all scripted/human demo for simulated environments [here](https://drive.google.com/drive/folders/1gPR03v05S1xiInoVJn7G7VJ9pDCnxq9O?usp=share_link).
 
 ### Repo Structure
