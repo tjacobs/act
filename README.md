@@ -2,7 +2,7 @@
 
 ### Overview
 This contains the implementation of ACT, Action Chunking with Transformers.
-For training robot arms to perform tasks.
+For training robots to perform tasks.
 
 It has two simulated environments: Transfer Cube and Bimanual Insertion.
 
