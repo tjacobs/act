@@ -13,9 +13,8 @@ from dm_control import mujoco
 from dm_control.rl import control
 from dm_control.suite import base
 
-import IPython
-e = IPython.embed
-
+#import IPython
+#e = IPython.embed
 
 def make_ee_sim_env(task_name):
     """
@@ -25,28 +24,26 @@ def make_ee_sim_env(task_name):
                         right_arm_pose (7),            # position and quaternion for end effector
                         right_gripper_positions (1),]  # normalized gripper position (0: close, 1: open)
 
-    Observation space: {"qpos": Concat[ left_arm_qpos (6),         # absolute joint position
+    Observation space: {"qpos": Concat[ left_arm_qpos (6),          # absolute joint position
                                         left_gripper_position (1),  # normalized gripper position (0: close, 1: open)
                                         right_arm_qpos (6),         # absolute joint position
                                         right_gripper_qpos (1)]     # normalized gripper position (0: close, 1: open)
-                        "qvel": Concat[ left_arm_qvel (6),         # absolute joint velocity (rad)
+                        "qvel": Concat[ left_arm_qvel (6),          # absolute joint velocity (rad)
                                         left_gripper_velocity (1),  # normalized gripper velocity (pos: opening, neg: closing)
                                         right_arm_qvel (6),         # absolute joint velocity (rad)
                                         right_gripper_qvel (1)]     # normalized gripper velocity (pos: opening, neg: closing)
-                        "images": {"main": (480x640x3)}        # h, w, c, dtype='uint8'
+                        "images": {"main": (480x640x3)}             # h, w, c, dtype='uint8'
     """
     if 'sim_transfer_cube' in task_name:
         xml_path = os.path.join(XML_DIR, f'bimanual_viperx_ee_transfer_cube.xml')
         physics = mujoco.Physics.from_xml_path(xml_path)
         task = TransferCubeEETask(random=False)
-        env = control.Environment(physics, task, time_limit=20, control_timestep=DT,
-                                  n_sub_steps=None, flat_observation=False)
+        env = control.Environment(physics, task, time_limit=20, control_timestep=DT, n_sub_steps=None, flat_observation=False)
     elif 'sim_insertion' in task_name:
         xml_path = os.path.join(XML_DIR, f'bimanual_viperx_ee_insertion.xml')
         physics = mujoco.Physics.from_xml_path(xml_path)
         task = InsertionEETask(random=False)
-        env = control.Environment(physics, task, time_limit=20, control_timestep=DT,
-                                  n_sub_steps=None, flat_observation=False)
+        env = control.Environment(physics, task, time_limit=20, control_timestep=DT, n_sub_steps=None, flat_observation=False)
     else:
         raise NotImplementedError
     return env
@@ -158,11 +155,12 @@ class TransferCubeEETask(BimanualViperXEETask):
     def initialize_episode(self, physics):
         """Sets the state of the environment at the start of each episode."""
         self.initialize_robots(physics)
-        # randomize box position
+
+        # Randomize box position
         cube_pose = sample_box_pose()
         box_start_idx = physics.model.name2id('red_box_joint', 'joint')
         np.copyto(physics.data.qpos[box_start_idx : box_start_idx + 7], cube_pose)
-        # print(f"randomized cube position to {cube_position}")
+        #print(f"randomized cube position to {cube_pose}")
 
         super().initialize_episode(physics)
 
@@ -172,7 +170,7 @@ class TransferCubeEETask(BimanualViperXEETask):
         return env_state
 
     def get_reward(self, physics):
-        # return whether left gripper is holding the box
+        # Return whether left gripper is holding the box
         all_contact_pairs = []
         for i_contact in range(physics.data.ncon):
             id_geom_1 = physics.data.contact[i_contact].geom1
@@ -182,6 +180,7 @@ class TransferCubeEETask(BimanualViperXEETask):
             contact_pair = (name_geom_1, name_geom_2)
             all_contact_pairs.append(contact_pair)
 
+        #print(all_contact_pairs)
         touch_left_gripper = ("red_box", "vx300s_left/10_left_gripper_finger") in all_contact_pairs
         touch_right_gripper = ("red_box", "vx300s_right/10_right_gripper_finger") in all_contact_pairs
         touch_table = ("red_box", "table") in all_contact_pairs
