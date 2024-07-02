@@ -6,23 +6,25 @@ import matplotlib.pyplot as plt
 import h5py
 
 from constants import PUPPET_GRIPPER_POSITION_NORMALIZE_FN, SIM_TASK_CONFIGS
+
 from ee_sim_env import make_ee_sim_env
 from sim_env import make_sim_env, BOX_POSE
+
 from scripted_policy import PickAndTransferPolicy, InsertionPolicy
 
 import IPython
-e = IPython.embed
-
+#e = IPython.embed
 
 def main(args):
     """
     Generate demonstration data in simulation.
-    First rollout the policy (defined in ee space) in ee_sim_env. Obtain the joint trajectory.
+    First roll out the policy (defined in end effector space) in ee_sim_env. Obtain the joint trajectory.
     Replace the gripper joint positions with the commanded joint position.
     Replay this joint trajectory (as action sequence) in sim_env, and record all observations.
     Save this episode of data, and continue to next episode of data collection.
     """
 
+    # Read args
     task_name = args['task_name']
     dataset_dir = args['dataset_dir']
     num_episodes = args['num_episodes']
@@ -30,9 +32,11 @@ def main(args):
     inject_noise = False
     render_cam_name = 'angle'
 
+    # Create output dir
     if not os.path.isdir(dataset_dir):
         os.makedirs(dataset_dir, exist_ok=True)
 
+    # Read config
     episode_len = SIM_TASK_CONFIGS[task_name]['episode_len']
     camera_names = SIM_TASK_CONFIGS[task_name]['camera_names']
     if task_name == 'sim_transfer_cube_scripted':
@@ -42,29 +46,40 @@ def main(args):
     else:
         raise NotImplementedError
 
+    # Run
     success = []
     for episode_idx in range(num_episodes):
         print(f'{episode_idx=}')
-        print('Rollout out EE space scripted policy')
-        # setup the environment
+        print('Rollout of end effector space scripted policy')
+
+        # Set up the environment
         env = make_ee_sim_env(task_name)
         ts = env.reset()
         episode = [ts]
         policy = policy_cls(inject_noise)
-        # setup plotting
+
+        # Set up render
         if onscreen_render:
             ax = plt.subplot()
             plt_img = ax.imshow(ts.observation['images'][render_cam_name])
             plt.ion()
+
+        # Run policy steps
         for step in range(episode_len):
             action = policy(ts)
+            #print(action)
             ts = env.step(action)
             episode.append(ts)
+
+            # Render
             if onscreen_render:
                 plt_img.set_data(ts.observation['images'][render_cam_name])
-                plt.pause(0.002)
+                plt.pause(0.001)
+
+        # Done
         plt.close()
 
+        # Check reward
         episode_return = np.sum([ts.reward for ts in episode[1:]])
         episode_max_reward = np.max([ts.reward for ts in episode[1:]])
         if episode_max_reward == env.task.max_reward:
@@ -72,8 +87,10 @@ def main(args):
         else:
             print(f"{episode_idx=} Failed")
 
+        # Get trajectory as list of qpos
         joint_traj = [ts.observation['qpos'] for ts in episode]
-        # replace gripper pose with gripper control
+
+        # Replace gripper pose with gripper control
         gripper_ctrl_traj = [ts.observation['gripper_ctrl'] for ts in episode]
         for joint, ctrl in zip(joint_traj, gripper_ctrl_traj):
             left_ctrl = PUPPET_GRIPPER_POSITION_NORMALIZE_FN(ctrl[0])
@@ -81,33 +98,41 @@ def main(args):
             joint[6] = left_ctrl
             joint[6+7] = right_ctrl
 
-        subtask_info = episode[0].observation['env_state'].copy() # box pose at step 0
+        # Grab position of box at start to reuse
+        subtask_info = episode[0].observation['env_state'].copy()
 
-        # clear unused variables
+        # Clear variables
         del env
         del episode
         del policy
 
-        # setup the environment
+        # Set up the environment
         print('Replaying joint commands')
         env = make_sim_env(task_name)
-        BOX_POSE[0] = subtask_info # make sure the sim_env has the same object configurations as ee_sim_env
+        BOX_POSE[0] = subtask_info # Make sure the sim_env has the same object configurations as ee_sim_env
         ts = env.reset()
 
+        # Replay
         episode_replay = [ts]
-        # setup plotting
+
+        # Set up render
         if onscreen_render:
             ax = plt.subplot()
             plt_img = ax.imshow(ts.observation['images'][render_cam_name])
             plt.ion()
-        for t in range(len(joint_traj)): # note: this will increase episode length by 1
+
+        # Run
+        for t in range(len(joint_traj)): # Note: this will increase episode length by 1
             action = joint_traj[t]
             ts = env.step(action)
             episode_replay.append(ts)
+
+            # Render
             if onscreen_render:
                 plt_img.set_data(ts.observation['images'][render_cam_name])
-                plt.pause(0.02)
+                plt.pause(0.01)
 
+        # Check rewards
         episode_return = np.sum([ts.reward for ts in episode_replay[1:]])
         episode_max_reward = np.max([ts.reward for ts in episode_replay[1:]])
         if episode_max_reward == env.task.max_reward:
@@ -117,6 +142,7 @@ def main(args):
             success.append(0)
             print(f"{episode_idx=} Failed")
 
+        # Done
         plt.close()
 
         """
@@ -130,6 +156,7 @@ def main(args):
         action                  (14,)         'float64'
         """
 
+        # Set up data
         data_dict = {
             '/observations/qpos': [],
             '/observations/qvel': [],
@@ -138,11 +165,12 @@ def main(args):
         for cam_name in camera_names:
             data_dict[f'/observations/images/{cam_name}'] = []
 
-        # because the replaying, there will be eps_len + 1 actions and eps_len + 2 timesteps
-        # truncate here to be consistent
+        # Because the replaying, there will be eps_len + 1 actions and eps_len + 2 timesteps,
+        # so truncate here to be consistent
         joint_traj = joint_traj[:-1]
         episode_replay = episode_replay[:-1]
 
+        # Map
         # len(joint_traj) i.e. actions: max_timesteps
         # len(episode_replay) i.e. time steps: max_timesteps + 1
         max_timesteps = len(joint_traj)
@@ -155,7 +183,7 @@ def main(args):
             for cam_name in camera_names:
                 data_dict[f'/observations/images/{cam_name}'].append(ts.observation['images'][cam_name])
 
-        # HDF5
+        # Write HDF5 file
         t0 = time.time()
         dataset_path = os.path.join(dataset_dir, f'episode_{episode_idx}')
         with h5py.File(dataset_path + '.hdf5', 'w', rdcc_nbytes=1024 ** 2 * 2) as root:
@@ -163,27 +191,25 @@ def main(args):
             obs = root.create_group('observations')
             image = obs.create_group('images')
             for cam_name in camera_names:
-                _ = image.create_dataset(cam_name, (max_timesteps, 480, 640, 3), dtype='uint8',
-                                         chunks=(1, 480, 640, 3), )
+                _ = image.create_dataset(cam_name, (max_timesteps, 480, 640, 3), dtype='uint8', chunks=(1, 480, 640, 3), )
             # compression='gzip',compression_opts=2,)
             # compression=32001, compression_opts=(0, 0, 0, 0, 9, 1, 1), shuffle=False)
             qpos = obs.create_dataset('qpos', (max_timesteps, 14))
             qvel = obs.create_dataset('qvel', (max_timesteps, 14))
             action = root.create_dataset('action', (max_timesteps, 14))
-
             for name, array in data_dict.items():
                 root[name][...] = array
         print(f'Saving: {time.time() - t0:.1f} secs\n')
 
+    # Print
     print(f'Saved to {dataset_dir}')
     print(f'Success: {np.sum(success)} / {len(success)}')
 
+# Parse args
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--task_name', action='store', type=str, help='task_name', required=True)
     parser.add_argument('--dataset_dir', action='store', type=str, help='dataset saving dir', required=True)
     parser.add_argument('--num_episodes', action='store', type=int, help='num_episodes', required=False)
     parser.add_argument('--onscreen_render', action='store_true')
-    
     main(vars(parser.parse_args()))
-
