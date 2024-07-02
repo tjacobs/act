@@ -54,8 +54,8 @@ def main(args):
 
         # Set up the environment
         env = make_ee_sim_env(task_name)
-        ts = env.reset()
-        episode = [ts]
+        ts = env.reset() # Timestep
+        episode = [ts] # Episode starts with initial timestep
         policy = policy_cls(inject_noise)
 
         # Set up render
@@ -70,6 +70,8 @@ def main(args):
             #print(action)
             ts = env.step(action)
             episode.append(ts)
+            #print(ts.reward)
+            #print(ts.observation['qpos'])
 
             # Render
             if onscreen_render:
@@ -83,7 +85,7 @@ def main(args):
         episode_return = np.sum([ts.reward for ts in episode[1:]])
         episode_max_reward = np.max([ts.reward for ts in episode[1:]])
         if episode_max_reward == env.task.max_reward:
-            print(f"{episode_idx=} Successful, {episode_return=}")
+            print(f"{episode_idx=} Successful, {episode_return=} {episode_max_reward=}")
         else:
             print(f"{episode_idx=} Failed")
 
