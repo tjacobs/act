@@ -19,11 +19,22 @@ On an Apple Silicon Mac:
     curl -O https://repo.anaconda.com/miniconda/Miniconda3-latest-MacOSX-arm64.sh
     sh Miniconda3-latest-MacOSX-arm64.sh
 
-    # Install PyTorch for metal
+    # Install PyTorch for Apple Mac metal
     conda install pytorch torchvision torchaudio -c pytorch-nightly
 
+On x64 linux:
+
+    # Install conda
+    mkdir -p ~/miniconda3
+    wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O ~/miniconda3/miniconda.sh
+    bash ~/miniconda3/miniconda.sh -b -u -p ~/miniconda3
+    rm -rf ~/miniconda3/miniconda.sh
+    #echo "PATH=$PATH:~/miniconda3/bin" >> ~/.bashrc
+    ~/miniconda3/bin/conda init
+
+Then:
+
     # Clone ACT from tjacobs
-    cd ~/Documents/GitHub/
     git clone https://github.com/tjacobs/act.git
     cd act
 
