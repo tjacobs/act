@@ -144,7 +144,10 @@ def get_image(ts, camera_names):
         curr_image = rearrange(ts.observation['images'][cam_name], 'h w c -> c h w')
         curr_images.append(curr_image)
     curr_image = np.stack(curr_images, axis=0)
-    curr_image = torch.from_numpy(curr_image / 255.0).float().unsqueeze(0) #.cuda()
+    if torch.cuda.is_available():
+        curr_image = torch.from_numpy(curr_image / 255.0).float().cuda().unsqueeze(0)
+    else:
+        curr_image = torch.from_numpy(curr_image / 255.0).float().unsqueeze(0)
     return curr_image
 
 
@@ -167,7 +170,8 @@ def eval_bc(config, ckpt_name, save_episode=True):
     policy = make_policy(policy_class, policy_config)
     loading_status = policy.load_state_dict(torch.load(ckpt_path, weights_only=True))
     print(loading_status)
-    #policy.cuda()
+    if torch.cuda.is_available():
+        policy.cuda()
     policy.eval()
     print(f'Loaded: {ckpt_path}')
     stats_path = os.path.join(ckpt_dir, f'dataset_stats.pkl')
@@ -216,9 +220,15 @@ def eval_bc(config, ckpt_name, save_episode=True):
 
         ### evaluation loop
         if temporal_agg:
-            all_time_actions = torch.zeros([max_timesteps, max_timesteps+num_queries, state_dim]) #.cuda()
+            if torch.cuda.is_available():
+                all_time_actions = torch.zeros([max_timesteps, max_timesteps+num_queries, state_dim]).cuda()
+            else:
+                all_time_actions = torch.zeros([max_timesteps, max_timesteps+num_queries, state_dim])
 
-        qpos_history = torch.zeros((1, max_timesteps, state_dim)) #.cuda()
+        if torch.cuda.is_available():
+            qpos_history = torch.zeros((1, max_timesteps, state_dim)).cuda()
+        else:
+            qpos_history = torch.zeros((1, max_timesteps, state_dim))
         image_list = [] # for visualization
         qpos_list = []
         target_qpos_list = []
@@ -239,7 +249,10 @@ def eval_bc(config, ckpt_name, save_episode=True):
                     image_list.append({'main': obs['image']})
                 qpos_numpy = np.array(obs['qpos'])
                 qpos = pre_process(qpos_numpy)
-                qpos = torch.from_numpy(qpos).float().unsqueeze(0) #.cuda()
+                if torch.cuda.is_available():
+                    qpos = torch.from_numpy(qpos).float().unsqueeze(0).cuda()
+                else:
+                    qpos = torch.from_numpy(qpos).float().unsqueeze(0)
                 qpos_history[:, t] = qpos
                 curr_image = get_image(ts, camera_names)
 
@@ -255,7 +268,10 @@ def eval_bc(config, ckpt_name, save_episode=True):
                         k = 0.01
                         exp_weights = np.exp(-k * np.arange(len(actions_for_curr_step)))
                         exp_weights = exp_weights / exp_weights.sum()
-                        exp_weights = torch.from_numpy(exp_weights).unsqueeze(dim=1) #.cuda()
+                        if torch.cuda.is_available():
+                            exp_weights = torch.from_numpy(exp_weights).unsqueeze(dim=1).cuda()
+                        else:
+                            exp_weights = torch.from_numpy(exp_weights).unsqueeze(dim=1)
                         raw_action = (actions_for_curr_step * exp_weights).sum(dim=0, keepdim=True)
                     else:
                         raw_action = all_actions[:, t % query_frequency]
@@ -315,7 +331,8 @@ def eval_bc(config, ckpt_name, save_episode=True):
 
 def forward_pass(data, policy):
     image_data, qpos_data, action_data, is_pad = data
-    image_data, qpos_data, action_data, is_pad = image_data, qpos_data, action_data, is_pad
+    if torch.cuda.is_available():
+        image_data, qpos_data, action_data, is_pad = image_data.cuda(), qpos_data.cuda(), action_data.cuda(), is_pad.cuda()
     return policy(qpos_data, image_data, action_data, is_pad) # TODO remove None
 
 
@@ -329,7 +346,8 @@ def train_bc(train_dataloader, val_dataloader, config):
     set_seed(seed)
 
     policy = make_policy(policy_class, policy_config)
-#    policy.cuda()
+    if torch.cuda.is_available():
+        policy.cuda()
     optimizer = make_optimizer(policy_class, policy)
 
     train_history = []
