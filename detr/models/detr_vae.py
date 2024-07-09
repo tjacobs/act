@@ -250,7 +250,7 @@ def build(args):
     )
 
     n_parameters = sum(p.numel() for p in model.parameters() if p.requires_grad)
-    print("number of parameters: %.2fM" % (n_parameters/1e6,))
+    print("Model parameters: %.2fM" % (n_parameters/1e6,))
 
     return model
 
