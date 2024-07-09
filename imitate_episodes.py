@@ -11,10 +11,10 @@ from einops import rearrange
 
 from constants import DT
 from constants import PUPPET_GRIPPER_JOINT_OPEN
-from utils import load_data # data functions
-from utils import sample_box_pose, sample_insertion_pose # robot functions
-from utils import compute_dict_mean, set_seed, detach_dict # helper functions
-from policy import ACTPolicy, CNNMLPPolicy
+from utils import load_data # Data functions
+from utils import sample_box_pose, sample_insertion_pose # Robot functions
+from utils import compute_dict_mean, set_seed, detach_dict # Helper functions
+from policy import ACTPolicy
 from visualize_episodes import save_videos
 from sim_env import BOX_POSE
 
@@ -197,10 +197,11 @@ def evaluate_policy(config, ckpt_name, save_episode=True):
         rollout_id += 0
         ### Set task
         if 'sim_transfer_cube' in task_name:
-            BOX_POSE[0] = sample_box_pose() # used in sim reset
+            BOX_POSE[0] = sample_box_pose() # Used in sim reset
         elif 'sim_insertion' in task_name:
-            BOX_POSE[0] = np.concatenate(sample_insertion_pose()) # used in sim reset
+            BOX_POSE[0] = np.concatenate(sample_insertion_pose()) # Used in sim reset
 
+        # Reset and get first timestep
         ts = env.reset()
 
         ### Onscreen render
@@ -325,6 +326,128 @@ def evaluate_policy(config, ckpt_name, save_episode=True):
     return success_rate, avg_return
 
 
+# Train the policy
+def train_policy(train_dataloader, val_dataloader, config):
+    # Get config
+    num_epochs = config['num_epochs']
+    ckpt_dir = config['ckpt_dir']
+    seed = config['seed']
+    policy_class = config['policy_class']
+    policy_config = config['policy_config']
+
+    # Set seed
+    set_seed(seed)
+
+    # Create the policy and optimizer
+    policy = make_policy(policy_class, policy_config)
+    if torch.cuda.is_available():
+        policy.cuda()
+    optimizer = make_optimizer(policy_class, policy)
+    print("")
+
+    # Init
+    train_history = []
+    validation_history = []
+    min_val_loss = np.inf
+    best_ckpt_info = None
+
+    # For each epoch, show progress bar with ETA
+    for epoch in tqdm(range(num_epochs)):
+        print(f'\nEpoch {epoch}:', end=" ")
+
+        # Validation
+        with torch.inference_mode():
+            policy.eval()
+            epoch_dicts = []
+            for batch_idx, data in enumerate(val_dataloader):
+                forward_dict = forward_pass(data, policy)
+                epoch_dicts.append(forward_dict)
+            epoch_summary = compute_dict_mean(epoch_dicts)
+            validation_history.append(epoch_summary)
+
+            # Loss
+            epoch_val_loss = epoch_summary['loss']
+
+            # Best loss?
+            if epoch_val_loss < min_val_loss:
+                min_val_loss = epoch_val_loss
+                best_ckpt_info = (epoch, min_val_loss, deepcopy(policy.state_dict()))
+
+        # Print validation loss
+        print(f'Validation loss: {epoch_val_loss:.2f}', end="\t")
+        summary_string = ''
+        for k, v in epoch_summary.items(): summary_string += f'{k}: {v.item():.3f} '
+        #print(summary_string)
+
+        # Training
+        policy.train()
+        optimizer.zero_grad()
+        for batch_idx, data in enumerate(train_dataloader):
+            # Forward
+            forward_dict = forward_pass(data, policy)
+
+            # Backward
+            loss = forward_dict['loss']
+            loss.backward()
+            optimizer.step()
+            optimizer.zero_grad()
+            train_history.append(detach_dict(forward_dict))
+
+        # Print training loss
+        epoch_summary = compute_dict_mean(train_history[(batch_idx+1)*epoch:(batch_idx+1)*(epoch+1)])
+        epoch_train_loss = epoch_summary['loss']
+        print(f'Training loss: {epoch_train_loss:.2f}')
+        summary_string = ''
+        for k, v in epoch_summary.items(): summary_string += f'{k}: {v.item():.3f} '
+        #print(summary_string)
+
+        # Save checkpoint
+        if epoch % 100 == 0:
+            ckpt_path = os.path.join(ckpt_dir, f'policy_epoch_{epoch}_seed_{seed}.ckpt')
+            torch.save(policy.state_dict(), ckpt_path)
+            plot_history(train_history, validation_history, epoch, ckpt_dir, seed)
+
+    # Save checkpoint
+    ckpt_path = os.path.join(ckpt_dir, f'policy_last.ckpt')
+    torch.save(policy.state_dict(), ckpt_path)
+
+    # Save best checkpoint
+    best_epoch, min_val_loss, best_state_dict = best_ckpt_info
+    ckpt_path = os.path.join(ckpt_dir, f'policy_epoch_{best_epoch}_seed_{seed}.ckpt')
+    torch.save(best_state_dict, ckpt_path)
+
+    # Print
+    print(f'Training finished:\nSeed {seed}, validation loss {min_val_loss:.6f} at epoch {best_epoch}')
+
+    # Save training curves
+    plot_history(train_history, validation_history, num_epochs, ckpt_dir, seed)
+
+    # Done
+    return best_ckpt_info
+
+
+# Get camera image from real or sim
+def get_image(ts, camera_names):
+    curr_images = []
+    for cam_name in camera_names:
+        curr_image = rearrange(ts.observation['images'][cam_name], 'h w c -> c h w')
+        curr_images.append(curr_image)
+    curr_image = np.stack(curr_images, axis=0)
+    if torch.cuda.is_available():
+        curr_image = torch.from_numpy(curr_image / 255.0).float().cuda().unsqueeze(0)
+    else:
+        curr_image = torch.from_numpy(curr_image / 255.0).float().unsqueeze(0)
+    return curr_image
+
+
+# Run the policy
+def forward_pass(data, policy):
+    image_data, qpos_data, action_data, is_pad = data
+    if torch.cuda.is_available():
+        image_data, qpos_data, action_data, is_pad = image_data.cuda(), qpos_data.cuda(), action_data.cuda(), is_pad.cuda()
+    return policy(qpos_data, image_data, action_data, is_pad)
+
+
 def make_policy(policy_class, policy_config):
     if policy_class == 'ACT':
         policy = ACTPolicy(policy_config)
@@ -341,106 +464,8 @@ def make_optimizer(policy_class, policy):
     return optimizer
 
 
-def get_image(ts, camera_names):
-    curr_images = []
-    for cam_name in camera_names:
-        curr_image = rearrange(ts.observation['images'][cam_name], 'h w c -> c h w')
-        curr_images.append(curr_image)
-    curr_image = np.stack(curr_images, axis=0)
-    if torch.cuda.is_available():
-        curr_image = torch.from_numpy(curr_image / 255.0).float().cuda().unsqueeze(0)
-    else:
-        curr_image = torch.from_numpy(curr_image / 255.0).float().unsqueeze(0)
-    return curr_image
-
-
-def forward_pass(data, policy):
-    image_data, qpos_data, action_data, is_pad = data
-    if torch.cuda.is_available():
-        image_data, qpos_data, action_data, is_pad = image_data.cuda(), qpos_data.cuda(), action_data.cuda(), is_pad.cuda()
-    return policy(qpos_data, image_data, action_data, is_pad) # TODO remove None
-
-
-def train_policy(train_dataloader, val_dataloader, config):
-    num_epochs = config['num_epochs']
-    ckpt_dir = config['ckpt_dir']
-    seed = config['seed']
-    policy_class = config['policy_class']
-    policy_config = config['policy_config']
-
-    set_seed(seed)
-
-    policy = make_policy(policy_class, policy_config)
-    if torch.cuda.is_available():
-        policy.cuda()
-    optimizer = make_optimizer(policy_class, policy)
-
-    train_history = []
-    validation_history = []
-    min_val_loss = np.inf
-    best_ckpt_info = None
-    for epoch in tqdm(range(num_epochs)):
-        print(f'\nEpoch {epoch}')
-        # validation
-        with torch.inference_mode():
-            policy.eval()
-            epoch_dicts = []
-            for batch_idx, data in enumerate(val_dataloader):
-                forward_dict = forward_pass(data, policy)
-                epoch_dicts.append(forward_dict)
-            epoch_summary = compute_dict_mean(epoch_dicts)
-            validation_history.append(epoch_summary)
-
-            epoch_val_loss = epoch_summary['loss']
-            if epoch_val_loss < min_val_loss:
-                min_val_loss = epoch_val_loss
-                best_ckpt_info = (epoch, min_val_loss, deepcopy(policy.state_dict()))
-        print(f'Val loss:   {epoch_val_loss:.5f}')
-        summary_string = ''
-        for k, v in epoch_summary.items():
-            summary_string += f'{k}: {v.item():.3f} '
-        print(summary_string)
-
-        # training
-        policy.train()
-        optimizer.zero_grad()
-        for batch_idx, data in enumerate(train_dataloader):
-            forward_dict = forward_pass(data, policy)
-            # backward
-            loss = forward_dict['loss']
-            loss.backward()
-            optimizer.step()
-            optimizer.zero_grad()
-            train_history.append(detach_dict(forward_dict))
-        epoch_summary = compute_dict_mean(train_history[(batch_idx+1)*epoch:(batch_idx+1)*(epoch+1)])
-        epoch_train_loss = epoch_summary['loss']
-        print(f'Train loss: {epoch_train_loss:.5f}')
-        summary_string = ''
-        for k, v in epoch_summary.items():
-            summary_string += f'{k}: {v.item():.3f} '
-        print(summary_string)
-
-        if epoch % 100 == 0:
-            ckpt_path = os.path.join(ckpt_dir, f'policy_epoch_{epoch}_seed_{seed}.ckpt')
-            torch.save(policy.state_dict(), ckpt_path)
-            plot_history(train_history, validation_history, epoch, ckpt_dir, seed)
-
-    ckpt_path = os.path.join(ckpt_dir, f'policy_last.ckpt')
-    torch.save(policy.state_dict(), ckpt_path)
-
-    best_epoch, min_val_loss, best_state_dict = best_ckpt_info
-    ckpt_path = os.path.join(ckpt_dir, f'policy_epoch_{best_epoch}_seed_{seed}.ckpt')
-    torch.save(best_state_dict, ckpt_path)
-    print(f'Training finished:\nSeed {seed}, val loss {min_val_loss:.6f} at epoch {best_epoch}')
-
-    # save training curves
-    plot_history(train_history, validation_history, num_epochs, ckpt_dir, seed)
-
-    return best_ckpt_info
-
-
 def plot_history(train_history, validation_history, num_epochs, ckpt_dir, seed):
-    # save training curves
+    # Save training curves
     for key in train_history[0]:
         plot_path = os.path.join(ckpt_dir, f'train_val_{key}_seed_{seed}.png')
         plt.figure()
@@ -453,7 +478,7 @@ def plot_history(train_history, validation_history, num_epochs, ckpt_dir, seed):
         plt.legend()
         plt.title(key)
         plt.savefig(plot_path)
-    print(f'Saved plots to {ckpt_dir}')
+    #print(f'Saved plots to {ckpt_dir}')
 
 
 if __name__ == '__main__':
@@ -468,7 +493,7 @@ if __name__ == '__main__':
     parser.add_argument('--num_epochs', action='store', type=int, help='num_epochs', required=True)
     parser.add_argument('--lr', action='store', type=float, help='lr', required=True)
 
-    # for ACT
+    # For ACT
     parser.add_argument('--kl_weight', action='store', type=int, help='KL Weight', required=False)
     parser.add_argument('--chunk_size', action='store', type=int, help='chunk_size', required=False)
     parser.add_argument('--hidden_dim', action='store', type=int, help='hidden_dim', required=False)
