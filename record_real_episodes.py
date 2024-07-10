@@ -6,12 +6,11 @@ import argparse
 import numpy as np
 from tqdm import tqdm
 
-from robot.constants_robot import DT, START_ARM_POSE, TASK_CONFIGS
+from robot.constants_robot import DT, START_ARM_POSE, TASK_CONFIGS, NUM_JOINTS
 from robot.constants_robot import MASTER_GRIPPER_JOINT_MID, PUPPET_GRIPPER_JOINT_CLOSE, PUPPET_GRIPPER_JOINT_OPEN
 from robot.robot_utils import Recorder, ImageRecorder, get_arm_gripper_positions
 from robot.robot_utils import move_arms, torque_on, torque_off, move_grippers
 from robot.real_env import make_real_env, get_action
-
 
 def main(args):
     # Load config from constants_robot task config
@@ -62,7 +61,7 @@ def capture_one_episode(dt, max_timesteps, camera_names, dataset_dir, dataset_na
         t0 = time.time()
         action = get_action(robot, robot) # Read robot joint positions
         t1 = time.time()
-        #ts = env.step(action) # Move other robot
+        ts = env.step(action) # Move other robot
         t2 = time.time()
         timesteps.append(ts)
         actions.append(action)
@@ -79,33 +78,31 @@ def capture_one_episode(dt, max_timesteps, camera_names, dataset_dir, dataset_na
     #if freq_mean < 42:
     #    return False
 
-    print("Recorded.")
-    exit()
-
     """
     For each timestep:
+
     observations
+    - qpos                  (NUM_JOINTS,)         'float64'
+    - qvel                  (NUM_JOINTS,)         'float64'
+    - effort                (NUM_JOINTS,)         'float64'
     - images
         - cam_high          (480, 640, 3) 'uint8'
         - cam_low           (480, 640, 3) 'uint8'
-        - cam_left_wrist    (480, 640, 3) 'uint8'
-        - cam_right_wrist   (480, 640, 3) 'uint8'
-    - qpos                  (14,)         'float64'
-    - qvel                  (14,)         'float64'
     
-    action                  (14,)         'float64'
+    action                  (NUM_JOINTS,)         'float64'
     """
 
+    # Init
     data_dict = {
         '/observations/qpos': [],
         '/observations/qvel': [],
         '/observations/effort': [],
         '/action': [],
     }
-    for cam_name in camera_names:
-        data_dict[f'/observations/images/{cam_name}'] = []
+    #for cam_name in camera_names:
+    #    data_dict[f'/observations/images/{cam_name}'] = []
 
-    # len(action): max_timesteps, len(time_steps): max_timesteps + 1
+    # Put in data dictionary
     while actions:
         action = actions.pop(0)
         ts = timesteps.pop(0)
@@ -113,29 +110,26 @@ def capture_one_episode(dt, max_timesteps, camera_names, dataset_dir, dataset_na
         data_dict['/observations/qvel'].append(ts.observation['qvel'])
         data_dict['/observations/effort'].append(ts.observation['effort'])
         data_dict['/action'].append(action)
-        for cam_name in camera_names:
-            data_dict[f'/observations/images/{cam_name}'].append(ts.observation['images'][cam_name])
+        #for cam_name in camera_names: data_dict[f'/observations/images/{cam_name}'].append(ts.observation['images'][cam_name])
 
-    # HDF5
+    # Save to HDF5 file
     t0 = time.time()
     with h5py.File(dataset_path + '.hdf5', 'w', rdcc_nbytes=1024**2*2) as root:
         root.attrs['sim'] = False
         obs = root.create_group('observations')
         image = obs.create_group('images')
-        for cam_name in camera_names:
-            _ = image.create_dataset(cam_name, (max_timesteps, 480, 640, 3), dtype='uint8',
-                                     chunks=(1, 480, 640, 3), )
+        #for cam_name in camera_names:
+        #    _ = image.create_dataset(cam_name, (max_timesteps, 480, 640, 3), dtype='uint8', chunks=(1, 480, 640, 3), )
             # compression='gzip',compression_opts=2,)
             # compression=32001, compression_opts=(0, 0, 0, 0, 9, 1, 1), shuffle=False)
-        _ = obs.create_dataset('qpos', (max_timesteps, 14))
-        _ = obs.create_dataset('qvel', (max_timesteps, 14))
-        _ = obs.create_dataset('effort', (max_timesteps, 14))
-        _ = root.create_dataset('action', (max_timesteps, 14))
-
-        for name, array in data_dict.items():
-            root[name][...] = array
+        _ = obs.create_dataset('qpos', (max_timesteps, NUM_JOINTS))
+        _ = obs.create_dataset('qvel', (max_timesteps, NUM_JOINTS))
+        _ = obs.create_dataset('effort', (max_timesteps, NUM_JOINTS))
+        _ = root.create_dataset('action', (max_timesteps, NUM_JOINTS))
+        for name, array in data_dict.items(): root[name][...] = array
     print(f'Saving: {time.time() - t0:.1f} secs')
 
+    # Good
     return True
 
 

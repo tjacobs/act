@@ -4,7 +4,7 @@ import collections
 import matplotlib.pyplot as plt
 import dm_env
 
-from robot.constants_robot import DT, START_ARM_POSE, MASTER_GRIPPER_JOINT_NORMALIZE_FN, PUPPET_GRIPPER_JOINT_UNNORMALIZE_FN
+from robot.constants_robot import DT, NUM_JOINTS, START_ARM_POSE, MASTER_GRIPPER_JOINT_NORMALIZE_FN, PUPPET_GRIPPER_JOINT_UNNORMALIZE_FN
 from robot.constants_robot import PUPPET_GRIPPER_POSITION_NORMALIZE_FN, PUPPET_GRIPPER_VELOCITY_NORMALIZE_FN
 from robot.constants_robot import PUPPET_GRIPPER_JOINT_OPEN, PUPPET_GRIPPER_JOINT_CLOSE
 from robot.robot_utils import Recorder, ImageRecorder
@@ -43,7 +43,7 @@ class RealEnv:
         right_arm_qpos = [] #right_qpos_raw[:6]
         left_gripper_qpos = [] #[PUPPET_GRIPPER_POSITION_NORMALIZE_FN(left_qpos_raw[7])] # this is position not joint
         right_gripper_qpos = [] #[PUPPET_GRIPPER_POSITION_NORMALIZE_FN(right_qpos_raw[7])] # this is position not joint
-        return np.concatenate([left_arm_qpos, left_gripper_qpos, right_arm_qpos, right_gripper_qpos])
+        return [1, 2, 3] #np.concatenate([left_arm_qpos, left_gripper_qpos, right_arm_qpos, right_gripper_qpos])
 
     def get_qvel(self):
         left_qvel_raw = [] #self.recorder_left.qvel
@@ -52,14 +52,14 @@ class RealEnv:
         right_arm_qvel = [] #right_qvel_raw[:6]
         left_gripper_qvel = [] #[PUPPET_GRIPPER_VELOCITY_NORMALIZE_FN(left_qvel_raw[7])]
         right_gripper_qvel = [] #[PUPPET_GRIPPER_VELOCITY_NORMALIZE_FN(right_qvel_raw[7])]
-        return np.concatenate([left_arm_qvel, left_gripper_qvel, right_arm_qvel, right_gripper_qvel])
+        return [1, 2, 3] #np.concatenate([left_arm_qvel, left_gripper_qvel, right_arm_qvel, right_gripper_qvel])
 
     def get_effort(self):
         left_effort_raw = [] #self.recorder_left.effort
         right_effort_raw = [] #self.recorder_right.effort
         left_robot_effort = [] #left_effort_raw[:7]
         right_robot_effort = [] #right_effort_raw[:7]
-        return np.concatenate([left_robot_effort, right_robot_effort])
+        return [1, 2, 3] #np.concatenate([left_robot_effort, right_robot_effort])
 
     def get_images(self):
         return [] #self.image_recorder.get_images()
@@ -110,10 +110,10 @@ class RealEnv:
         state_len = int(len(action) / 2)
         left_action = action[:state_len]
         right_action = action[state_len:]
-        self.puppet_bot_left.arm.set_joint_positions(left_action[:6], blocking=False)
-        self.puppet_bot_right.arm.set_joint_positions(right_action[:6], blocking=False)
-        self.set_gripper_pose(left_action[-1], right_action[-1])
-        time.sleep(DT)
+        #self.puppet_bot_left.arm.set_joint_positions(left_action[:6], blocking=False)
+        #self.puppet_bot_right.arm.set_joint_positions(right_action[:6], blocking=False)
+        #self.set_gripper_pose(left_action[-1], right_action[-1])
+        #time.sleep(DT)
         return dm_env.TimeStep(
             step_type=dm_env.StepType.MID,
             reward=self.get_reward(),
@@ -122,9 +122,12 @@ class RealEnv:
 
 
 def get_action(master_bot_left, master_bot_right):
-    # Action is 6 joint + 1 gripper, for two arms
-    action = np.zeros(14) 
-    
+    # Action is NUM_JOINTS joints
+    action = np.zeros(NUM_JOINTS) 
+    action[0] = 1
+    action[1] = 2
+    action[2] = 3
+
     # Arm actions
     #action[:6] = master_bot_left.dxl.joint_states.position[:6]
     #action[7:7+6] = master_bot_right.dxl.joint_states.position[:6]
