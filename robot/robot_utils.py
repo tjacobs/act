@@ -72,12 +72,11 @@ class ImageRecorder:
             print(f'{cam_name} {image_freq=:.2f}')
         print()
 
+
+# Records joint positions from a connected robot
 class Recorder:
-    def __init__(self, side, init_node=True, is_debug=False):
+    def __init__(self, init_node=True, is_debug=False):
         from collections import deque
-        import rospy
-        from sensor_msgs.msg import JointState
-        from interbotix_xs_msgs.msg import JointGroupCommand, JointSingleCommand
 
         self.secs = None
         self.nsecs = None

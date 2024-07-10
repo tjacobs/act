@@ -36,9 +36,7 @@ def capture_one_episode(dt, max_timesteps, camera_names, dataset_dir, dataset_na
     # Print
     print(f'Recording: {dataset_name}')
 
-    # Set source of robot data
-    #master_bot_left = InterbotixManipulatorXS(robot_model="wx250s", group_name="arm", gripper_name="gripper",                                          robot_name=f'master_left', init_node=True)
-    #master_bot_right = InterbotixManipulatorXS(robot_model="wx250s", group_name="arm", gripper_name="gripper",                                               robot_name=f'master_right', init_node=False)
+    # Set up connection to real robot
     env = make_real_env(init_node=False, setup_robots=False)
     robot = None
 

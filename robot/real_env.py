@@ -7,43 +7,31 @@ import dm_env
 from robot.constants_robot import DT, NUM_JOINTS, START_ARM_POSE, MASTER_GRIPPER_JOINT_NORMALIZE_FN, PUPPET_GRIPPER_JOINT_UNNORMALIZE_FN
 from robot.constants_robot import PUPPET_GRIPPER_POSITION_NORMALIZE_FN, PUPPET_GRIPPER_VELOCITY_NORMALIZE_FN
 from robot.constants_robot import PUPPET_GRIPPER_JOINT_OPEN, PUPPET_GRIPPER_JOINT_CLOSE
-from robot.robot_utils import Recorder, ImageRecorder
+from robot.recorder import Recorder
+from robot.robot_utils import ImageRecorder
 from robot.robot_utils import setup_master_bot, setup_puppet_bot, move_arms, move_grippers
 
 class RealEnv:
     """
     Environment for real robot
 
-    Action space:      [arm_qpos (3)]                               # absolute joint positions
+    Action space:      [arm_qpos (NUM_JOINTS)]                       # absolute joint positions
 
-    Observation space:  "qpos": Concat[ left_arm_qpos (3) ]         # absolute joint positions
-                        "qvel": Concat[ left_arm_qvel (3) ]         # absolute joint velocities (rad)
-                        "images": {"cam_high": (480x640x3),         # h, w, c, dtype='uint8'
-                                   "cam_low": (480x640x3)}          # h, w, c, dtype='uint8'
+    Observation space:  "qpos": Concat[ left_arm_qpos (NUM_JOINTS) ] # absolute joint positions
+                        "qvel": Concat[ left_arm_qvel (NUM_JOINTS) ] # absolute joint velocities (rad)
+                        "images": {"cam_high": (480x640x3),          # h, w, c, dtype='uint8'
+                                   "cam_low": (480x640x3)}           # h, w, c, dtype='uint8'
     """
 
     def __init__(self, init_node, setup_robots=True):
-        #self.puppet_bot_left = InterbotixManipulatorXS(robot_model="vx300s", group_name="arm", gripper_name="gripper",                                              robot_name=f'puppet_left', init_node=init_node)
-        #self.puppet_bot_right = InterbotixManipulatorXS(robot_model="vx300s", group_name="arm", gripper_name="gripper",                                                        robot_name=f'puppet_right', init_node=False)
-        if setup_robots:  self.setup_robots()
-
-        #self.recorder_left = Recorder('left', init_node=False)
-        #self.recorder_right = Recorder('right', init_node=False)
+        # Create robot joint data reader
+        self.recorder = Recorder()
         #self.image_recorder = ImageRecorder(init_node=False)
-        #self.gripper_command = JointSingleCommand(name="gripper")
-
-    def setup_robots(self):
-        setup_puppet_bot(self.puppet_bot_left)
-        setup_puppet_bot(self.puppet_bot_right)
 
     def get_qpos(self):
-        left_qpos_raw = [] #self.recorder_left.qpos
-        right_qpos_raw = [] #self.recorder_right.qpos
-        left_arm_qpos = [] #left_qpos_raw[:6]
-        right_arm_qpos = [] #right_qpos_raw[:6]
-        left_gripper_qpos = [] #[PUPPET_GRIPPER_POSITION_NORMALIZE_FN(left_qpos_raw[7])] # this is position not joint
-        right_gripper_qpos = [] #[PUPPET_GRIPPER_POSITION_NORMALIZE_FN(right_qpos_raw[7])] # this is position not joint
-        return [1, 2, 3] #np.concatenate([left_arm_qpos, left_gripper_qpos, right_arm_qpos, right_gripper_qpos])
+        qpos = self.recorder.get_joint_positions()
+        #print(qpos)
+        return qpos
 
     def get_qvel(self):
         left_qvel_raw = [] #self.recorder_left.qvel
@@ -72,6 +60,10 @@ class RealEnv:
         right_gripper_desired_joint = PUPPET_GRIPPER_JOINT_UNNORMALIZE_FN(right_gripper_desired_pos_normalized)
         self.gripper_command.cmd = right_gripper_desired_joint
         self.puppet_bot_right.gripper.core.pub_single.publish(self.gripper_command)
+
+    def setup_robots(self):
+        setup_puppet_bot(self.puppet_bot_left)
+        setup_puppet_bot(self.puppet_bot_right)
 
     def _reset_joints(self):
         reset_position = START_ARM_POSE[:6]
