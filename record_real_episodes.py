@@ -6,11 +6,10 @@ import argparse
 import numpy as np
 from tqdm import tqdm
 
-from robot.constants_robot import DT, START_ARM_POSE, TASK_CONFIGS, NUM_JOINTS
-from robot.constants_robot import MASTER_GRIPPER_JOINT_MID, PUPPET_GRIPPER_JOINT_CLOSE, PUPPET_GRIPPER_JOINT_OPEN
+from robot.constants_robot import DT, NUM_JOINTS, TASK_CONFIGS
 from robot.recorder import Recorder
 from robot.robot_utils import ImageRecorder
-from robot.real_env import make_real_env, get_action
+from robot.real_env import make_real_env
 
 def main(args):
     # Load config from constants_robot task config
@@ -36,8 +35,7 @@ def capture_one_episode(dt, max_timesteps, camera_names, dataset_dir, dataset_na
     print(f'Recording: {dataset_name}')
 
     # Set up connection to real robot
-    env = make_real_env(init_node=False, setup_robots=False)
-    robot = None
+    env = make_real_env()
 
     # Check files
     if not os.path.isdir(dataset_dir): os.makedirs(dataset_dir)
@@ -53,7 +51,8 @@ def capture_one_episode(dt, max_timesteps, camera_names, dataset_dir, dataset_na
     actual_dt_history = []
     for t in tqdm(range(max_timesteps)):
         t0 = time.time()
-        action = get_action() # Read robot joint positions
+        action = env.get_action() # Read robot joint positions
+        print(action)
         t1 = time.time()
         ts = env.step(action, False) # Get observations from camera
         t2 = time.time()
@@ -136,7 +135,6 @@ def print_dt_diagnosis(actual_dt_history):
     get_action_time = actual_dt_history[:, 1] - actual_dt_history[:, 0]
     step_env_time = actual_dt_history[:, 2] - actual_dt_history[:, 1]
     total_time = actual_dt_history[:, 2] - actual_dt_history[:, 0]
-
     dt_mean = np.mean(total_time)
     dt_std = np.std(total_time)
     freq_mean = 1 / dt_mean

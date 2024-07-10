@@ -116,7 +116,7 @@ def read_robot_joints(ser):
 
 def write_robot_joints(ser, values):
     [num1, num2, num3] = values
-    print(f"{num1}, {num2}")
+    print(f"{int(num1)}, {int(num2)}")
     byte_array = bytearray([0x61, 0x1, 0x1, int(num1)//10, int(num2)//10, 0x0, 0x0, 0x0])
     ser.write(byte_array)
 
