@@ -12,7 +12,7 @@ from sim_env import make_sim_env, BOX_POSE
 
 from scripted_policy import PickAndTransferPolicy, InsertionPolicy
 
-import IPython
+#import IPython
 #e = IPython.embed
 
 def main(args):

@@ -4,7 +4,7 @@
 This contains the implementation of ACT, Action Chunking with Transformers.
 For training robots to perform tasks.
 
-It has two simulated environments: Transfer Cube and Bimanual Insertion.
+It has two simulated environments: Transfer Cube and Insertion.
 
 You can train and evaluate ACT in sim or real.
 
@@ -61,48 +61,46 @@ Then:
 
 ### Run
 
-    # Generate training runs
-    python3 record_sim_episodes.py --task_name sim_transfer_cube_scripted --dataset_dir data/sim_transfer_cube_scripted --num_episodes 2 --onscreen_render 
+    # Generate training data from simulator
+    ./record_sim.sh
 
-    # Train network
-    python3 imitate_episodes.py    --task_name sim_transfer_cube_scripted --ckpt_dir checkpoints --policy_class ACT --kl_weight 10 --chunk_size 100 --hidden_dim 512 --batch_size 8 --dim_feedforward 3200 --num_epochs 2000 --lr 1e-5 --seed 0
+    # Train network from data (sim or real)
+    ./train.sh
 
-    # Evaluate network
-    python3 imitate_episodes.py    --task_name sim_transfer_cube_scripted --ckpt_dir checkpoints --policy_class ACT --kl_weight 10 --chunk_size 100 --hidden_dim 512 --batch_size 8 --dim_feedforward 3200 --num_epochs 2000 --lr 1e-5 --seed 0 --eval
+    # Evaluate network in simulator
+    ./evaluate_sim.sh
+
+    # Generate training data from real robot
+    ./record_real.sh
+
+    # Evaluate network on real robot
+    ./evaluate_real.sh
 
 ### Tips
 
-Other task: sim_insertion_scripted
-
-To vizualize:
-    python3 visualize_episodes.py --dataset_dir <data save dir> --episode_idx 0
-
-The success rate should be around 90% for transfer cube, and around 50% for insertion.
+The evaluation success rate should be around 90% for transfer cube simulator, and around 50% for insertion simulator.
 
 To enable temporal ensembling, add flag ``--temporal_agg``.
 
-Videos will be saved to ``checkpoints`` for each rollout.
+Videos will be saved to ``checkpoints`` for each evaluation.
 
-You can also add ``--onscreen_render`` to see real-time rendering during evaluation.
-
-For real-world, train for at least 5000 epochs or 3-4 times the length after the loss has plateaued.
+For real, train for at least 5000 epochs or 3-4 times the length after the loss has plateaued.
 
 Refer to [tuning tips](https://docs.google.com/document/d/1FVIZfoALXg_ZkYKaYVh-qOlaXveq5CtvJHXkY25eYhs/edit?usp=sharing).
 
 For real, you would also need to install [ALOHA](https://github.com/tonyzhaozh/aloha).
 
-You can find all scripted/human demo for simulated environments [here](https://drive.google.com/drive/folders/1gPR03v05S1xiInoVJn7G7VJ9pDCnxq9O?usp=share_link).
+You can find recorded data for scripted/human sim [here](https://drive.google.com/drive/folders/1gPR03v05S1xiInoVJn7G7VJ9pDCnxq9O?usp=share_link).
 
 ### Repo Structure
-- ``record_sim_episodes.py`` Record scripted episodes from sim
-- ``imitate_episodes.py`` Train and Evaluate ACT
-- ``visualize_episodes.py`` Save videos from a .hdf5 dataset
+- ``record_sim_episodes.py`` Record data from sim
+- ``imitate_episodes.py`` Train and evaluate ACT
 - ``policy.py`` An adaptor for ACT policy
 - ``detr`` Model definitions of ACT, modified from DETR
-- ``sim_env.py`` Mujoco + DM_Control environments with joint space control
-- ``ee_sim_env.py`` Mujoco + DM_Control environments with EE space control
+- ``sim_env.py``    Mujoco + DM_Control environments with joint space control
+- ``ee_sim_env.py`` Mujoco + DM_Control environments with end effector space control
 - ``scripted_policy.py`` Scripted policies for sim environments
 - ``constants.py`` Constants shared across files
 - ``utils.py`` Utils such as data loading and helper functions
-
+- ``visualize_episodes.py`` Save videos from a .hdf5 dataset
 
