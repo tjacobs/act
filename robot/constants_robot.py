@@ -4,17 +4,17 @@ DATA_DIR = 'data'
 TASK_CONFIGS = {
     'robot_move':{
         'dataset_dir': DATA_DIR + '/robot_move',
-        'num_episodes': 2,
+        'num_episodes': 1,
         'episode_len': 1000,
-        'camera_names': ['cam_high', 'cam_low', 'cam_left_wrist', 'cam_right_wrist']
+        'camera_names': ['cam_1']
     },
 }
 
 ### Fixed constants
 DT = 0.02
 NUM_JOINTS = 3
-JOINT_NAMES = ["waist", "shoulder", "elbow", "forearm_roll", "wrist_angle", "wrist_rotate"]
-START_ARM_POSE = [0, -0.96, 1.16, 0, -0.3, 0, 0.02239, -0.02239,  0, -0.96, 1.16, 0, -0.3, 0, 0.02239, -0.02239]
+JOINT_NAMES = ["wrist", "gripper", ""]
+START_ARM_POSE = [0, 100, 100]
 
 # Left finger position limits (qpos[7]), right_finger = -1 * left_finger
 MASTER_GRIPPER_POSITION_OPEN = 0.02417
