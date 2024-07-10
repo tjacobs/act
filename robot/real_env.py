@@ -53,27 +53,23 @@ class RealEnv:
     def get_reward(self):
         return 0
 
-    def reset(self, fake=False):
-        if not fake:
-            # Reboot puppet robot gripper motors
-            self.puppet_bot_left.dxl.robot_reboot_motors("single", "gripper", True)
-            self.puppet_bot_right.dxl.robot_reboot_motors("single", "gripper", True)
-            self._reset_joints()
-            self._reset_gripper()
+    def reset(self):
+        # Return first timestep with reward and observation
         return dm_env.TimeStep(
             step_type=dm_env.StepType.FIRST,
             reward=self.get_reward(),
             discount=None,
             observation=self.get_observation())
 
-    def step(self, action):
-        state_len = int(len(action) / 2)
-        left_action = action[:state_len]
-        right_action = action[state_len:]
-        #self.puppet_bot_left.arm.set_joint_positions(left_action[:6], blocking=False)
-        #self.puppet_bot_right.arm.set_joint_positions(right_action[:6], blocking=False)
-        #self.set_gripper_pose(left_action[-1], right_action[-1])
-        #time.sleep(DT)
+    def step(self, action, move_robot):
+        # Set robot joints to positions of this timestep's action if asked to
+        if move_robot:
+            self.recorder.set_joint_positions(action)
+
+        # Sleep
+        time.sleep(DT)
+
+        # Return this timestep with reward and observation
         return dm_env.TimeStep(
             step_type=dm_env.StepType.MID,
             reward=self.get_reward(),
@@ -81,21 +77,12 @@ class RealEnv:
             observation=self.get_observation())
 
 
-def get_action(master_bot_left, master_bot_right):
+def get_action():
     # Action is NUM_JOINTS joints
     action = np.zeros(NUM_JOINTS) 
-    action[0] = 0
-    action[1] = 0
+    action[0] = 250
+    action[1] = 350
     action[2] = 0
-
-    # Arm actions
-    #action[:6] = master_bot_left.dxl.joint_states.position[:6]
-    #action[7:7+6] = master_bot_right.dxl.joint_states.position[:6]
-
-    # Gripper actions
-    #action[6] = MASTER_GRIPPER_JOINT_NORMALIZE_FN(master_bot_left.dxl.joint_states.position[6])
-    #action[7+6] = MASTER_GRIPPER_JOINT_NORMALIZE_FN(master_bot_right.dxl.joint_states.position[6])
-
     return action
 
 

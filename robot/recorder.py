@@ -10,7 +10,9 @@ import time
 import glob
 import argparse
 import matplotlib.pyplot as plt
+import numpy as np
 import datetime
+
 
 # USB serial port of robot
 port_pattern = '/dev/tty.usbmodem*'
@@ -39,9 +41,34 @@ class Recorder:
             print("Serial port not open")
             return None
 
-        # Read robot joint positions
+        # Read joint positions from robot
         pos_joints = read_robot_joints(self.serial)
         return pos_joints
+
+    def set_joint_positions(self, joints):
+        # Check serial port
+        if self.serial is None:
+            print("Serial port not open")
+            return
+
+        # Write joint positions to robot
+        write_robot_joints(self.serial, joints)
+
+
+    def print_diagnostics(self):
+        def dt_helper(l):
+            l = np.array(l)
+            diff = l[1:] - l[:-1]
+            return np.mean(diff)
+
+        # Test
+        self.joint_timestamps = [1, 2, 5]
+        self.action_timestamps = [1, 2, 10]
+
+        # Get frequency
+        joint_freq = 1 / dt_helper(self.joint_timestamps)
+        action_freq = 1 / dt_helper(self.action_timestamps)
+        print(f'{joint_freq=:.2f}\n{action_freq=:.2f}\n')
 
 
 def open_serial_port(port, baudrate):
@@ -89,7 +116,8 @@ def read_robot_joints(ser):
 
 def write_robot_joints(ser, values):
     [num1, num2, num3] = values
-    byte_array = bytearray([0x61, 0x1, 0x1, num1//10, num2//10, 0x0, 0x0, 0x0])
+    print(f"{num1}, {num2}")
+    byte_array = bytearray([0x61, 0x1, 0x1, int(num1)//10, int(num2)//10, 0x0, 0x0, 0x0])
     ser.write(byte_array)
 
 
