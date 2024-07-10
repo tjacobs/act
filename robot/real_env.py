@@ -28,52 +28,6 @@ class RealEnv:
         self.recorder = Recorder()
         #self.image_recorder = ImageRecorder(init_node=False)
 
-    def get_qpos(self):
-        qpos = self.recorder.get_joint_positions()
-        #print(qpos)
-        return qpos
-
-    def get_qvel(self):
-        left_qvel_raw = [] #self.recorder_left.qvel
-        right_qvel_raw = [] #self.recorder_right.qvel
-        left_arm_qvel = [] #left_qvel_raw[:6]
-        right_arm_qvel = [] #right_qvel_raw[:6]
-        left_gripper_qvel = [] #[PUPPET_GRIPPER_VELOCITY_NORMALIZE_FN(left_qvel_raw[7])]
-        right_gripper_qvel = [] #[PUPPET_GRIPPER_VELOCITY_NORMALIZE_FN(right_qvel_raw[7])]
-        return [1, 2, 3] #np.concatenate([left_arm_qvel, left_gripper_qvel, right_arm_qvel, right_gripper_qvel])
-
-    def get_effort(self):
-        left_effort_raw = [] #self.recorder_left.effort
-        right_effort_raw = [] #self.recorder_right.effort
-        left_robot_effort = [] #left_effort_raw[:7]
-        right_robot_effort = [] #right_effort_raw[:7]
-        return [1, 2, 3] #np.concatenate([left_robot_effort, right_robot_effort])
-
-    def get_images(self):
-        return [] #self.image_recorder.get_images()
-
-    def set_gripper_pose(self, left_gripper_desired_pos_normalized, right_gripper_desired_pos_normalized):
-        left_gripper_desired_joint = PUPPET_GRIPPER_JOINT_UNNORMALIZE_FN(left_gripper_desired_pos_normalized)
-        self.gripper_command.cmd = left_gripper_desired_joint
-        self.puppet_bot_left.gripper.core.pub_single.publish(self.gripper_command)
-
-        right_gripper_desired_joint = PUPPET_GRIPPER_JOINT_UNNORMALIZE_FN(right_gripper_desired_pos_normalized)
-        self.gripper_command.cmd = right_gripper_desired_joint
-        self.puppet_bot_right.gripper.core.pub_single.publish(self.gripper_command)
-
-    def setup_robots(self):
-        setup_puppet_bot(self.puppet_bot_left)
-        setup_puppet_bot(self.puppet_bot_right)
-
-    def _reset_joints(self):
-        reset_position = START_ARM_POSE[:6]
-        move_arms([self.puppet_bot_left, self.puppet_bot_right], [reset_position, reset_position], move_time=1)
-
-    def _reset_gripper(self):
-        """Set to position mode and do position resets: first open then close. Then change back to PWM mode"""
-        move_grippers([self.puppet_bot_left, self.puppet_bot_right], [PUPPET_GRIPPER_JOINT_OPEN] * 2, move_time=0.5)
-        move_grippers([self.puppet_bot_left, self.puppet_bot_right], [PUPPET_GRIPPER_JOINT_CLOSE] * 2, move_time=1)
-
     def get_observation(self):
         obs = collections.OrderedDict()
         obs['qpos'] = self.get_qpos()
@@ -81,6 +35,20 @@ class RealEnv:
         obs['effort'] = self.get_effort()
         obs['images'] = self.get_images()
         return obs
+
+    def get_qpos(self):
+        qpos = self.recorder.get_joint_positions()
+        #print(qpos)
+        return qpos
+
+    def get_qvel(self):
+        return [0, 0, 0]
+
+    def get_effort(self):
+        return [0, 0, 0]
+
+    def get_images(self):
+        return [] #self.image_recorder.get_images()
 
     def get_reward(self):
         return 0
@@ -116,9 +84,9 @@ class RealEnv:
 def get_action(master_bot_left, master_bot_right):
     # Action is NUM_JOINTS joints
     action = np.zeros(NUM_JOINTS) 
-    action[0] = 1
-    action[1] = 2
-    action[2] = 3
+    action[0] = 0
+    action[1] = 0
+    action[2] = 0
 
     # Arm actions
     #action[:6] = master_bot_left.dxl.joint_states.position[:6]
