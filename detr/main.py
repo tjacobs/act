@@ -18,17 +18,17 @@ def get_args_parser():
                         help='gradient clipping max norm')
 
     # Model parameters
-    # * Backbone
     parser.add_argument('--backbone', default='resnet18', type=str, # will be overridden
                         help="Name of the convolutional backbone to use")
     parser.add_argument('--dilation', action='store_true',
                         help="If true, we replace stride with dilation in the last convolutional block (DC5)")
     parser.add_argument('--position_embedding', default='sine', type=str, choices=('sine', 'learned'),
                         help="Type of positional embedding to use on top of the image features")
+
     parser.add_argument('--camera_names', default=[], type=list, # will be overridden
                         help="A list of camera names")
 
-    # * Transformer
+    # Transformer
     parser.add_argument('--enc_layers', default=4, type=int, # will be overridden
                         help="Number of encoding layers in the transformer")
     parser.add_argument('--dec_layers', default=6, type=int, # will be overridden
@@ -45,21 +45,9 @@ def get_args_parser():
                         help="Number of query slots")
     parser.add_argument('--pre_norm', action='store_true')
 
-    # * Segmentation
+    # Segmentation
     parser.add_argument('--masks', action='store_true',
                         help="Train segmentation head if the flag is provided")
-
-    # repeat args in imitate_episodes just to avoid error. Will not be used
-    #parser.add_argument('--eval', action='store_true')
-    #parser.add_argument('--onscreen_render', action='store_true')
-    #parser.add_argument('--ckpt_dir', action='store', type=str, help='ckpt_dir', required=True)
-    #parser.add_argument('--policy_class', action='store', type=str, help='policy_class, capitalize', required=True)
-    #parser.add_argument('--task_name', action='store', type=str, help='task_name', required=True)
-    #parser.add_argument('--seed', action='store', type=int, help='seed', required=True)
-    #parser.add_argument('--num_epochs', action='store', type=int, help='num_epochs', required=True)
-    #parser.add_argument('--kl_weight', action='store', type=int, help='KL Weight', required=False)
-    #parser.add_argument('--chunk_size', action='store', type=int, help='chunk_size', required=False)
-    #parser.add_argument('--temporal_agg', action='store_true')
 
     return parser
 
@@ -68,14 +56,14 @@ def build_ACT_model_and_optimizer(args_override):
     parser = argparse.ArgumentParser('DETR training and evaluation script', parents=[get_args_parser()])
     args = parser.parse_args()
 
-    for k, v in args_override.items():
-        setattr(args, k, v)
+    # Set args
+    for k, v in args_override.items(): setattr(args, k, v)
 
+    # Build model
     model = build_ACT_model(args)
-    if torch.cuda.is_available():
-        model.cuda()
-        print("CUDA TIME")
+    if torch.cuda.is_available(): model.cuda()
 
+    # Build optimizer
     param_dicts = [
         {"params": [p for n, p in model.named_parameters() if "backbone" not in n and p.requires_grad]},
         {
@@ -83,32 +71,8 @@ def build_ACT_model_and_optimizer(args_override):
             "lr": args.lr_backbone,
         },
     ]
-    optimizer = torch.optim.AdamW(param_dicts, lr=args.lr,
-                                  weight_decay=args.weight_decay)
+    optimizer = torch.optim.AdamW(param_dicts, lr=args.lr, weight_decay=args.weight_decay)
 
-    return model, optimizer
-
-
-def build_CNNMLP_model_and_optimizer(args_override):
-    parser = argparse.ArgumentParser('DETR training and evaluation script', parents=[get_args_parser()])
-    args = parser.parse_args()
-
-    for k, v in args_override.items():
-        setattr(args, k, v)
-
-    model = build_CNNMLP_model(args)
-    if torch.cuda.is_available():
-        model.cuda()
-
-    param_dicts = [
-        {"params": [p for n, p in model.named_parameters() if "backbone" not in n and p.requires_grad]},
-        {
-            "params": [p for n, p in model.named_parameters() if "backbone" in n and p.requires_grad],
-            "lr": args.lr_backbone,
-        },
-    ]
-    optimizer = torch.optim.AdamW(param_dicts, lr=args.lr,
-                                  weight_decay=args.weight_decay)
-
+    # Return
     return model, optimizer
 
