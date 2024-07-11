@@ -7,9 +7,7 @@ from robot.real_env import make_real_env
 def main(args):
     # Read args
     dataset_dir = args['dataset_dir']
-    if not dataset_dir: dataset_dir = "data/robot_move"
     episode_idx = args['episode_idx']
-    if not episode_idx: episode_idx = 0
     dataset_name = f'episode_{episode_idx}'
 
     # Open episode file
@@ -31,8 +29,8 @@ def main(args):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--dataset_dir', action='store', type=str, help='Dataset dir.', required=False)
-    parser.add_argument('--episode_idx', action='store', type=int, help='Episode index.', required=False)
+    parser.add_argument('--dataset_dir', default="data/robot_move", action='store', type=str, help='Dataset dir.', required=False)
+    parser.add_argument('--episode_idx', default=0, action='store', type=int, help='Episode index.', required=False)
     main(vars(parser.parse_args()))
 
 

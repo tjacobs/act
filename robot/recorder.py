@@ -12,6 +12,7 @@ import argparse
 import matplotlib.pyplot as plt
 import numpy as np
 import datetime
+import cv2
 
 
 # USB serial port of robot
@@ -190,6 +191,33 @@ def write_to_serial_port(ser, input_file, plot):
         plt.legend()
         plt.grid(True)
         plt.show()
+
+
+class ImageRecorder:
+    def __init__(self, camera_names):
+        self.camera_names = camera_names
+        for cam_name in self.camera_names:
+            setattr(self, f'{cam_name}_image', None)
+        self.get_image("cam_1")
+
+    def get_image(self, cam_name):
+        # Get image from camera
+        width, height = 640, 480
+        b, g, r = 0x3E, 0x88, 0xE5  # Orange
+        image = np.zeros((height, width, 3), np.uint8)
+        image[:, :, 0] = b
+        image[:, :, 1] = g
+        image[:, :, 2] = r
+        #cv2.imshow("A New Image", image)
+        #cv2.waitKey(0)
+
+        # Save image
+        setattr(self, f'{cam_name}_image', image)
+
+    def get_images(self):
+        image_dict = dict()
+        for cam_name in self.camera_names: image_dict[cam_name] = getattr(self, f'{cam_name}_image')
+        return image_dict
 
 
 def find_serial_port(pattern):

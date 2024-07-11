@@ -4,7 +4,7 @@ DATA_DIR = 'data'
 TASK_CONFIGS = {
     'robot_move':{
         'dataset_dir': DATA_DIR + '/robot_move',
-        'num_episodes': 1,
+        'num_episodes': 2,
         'episode_len': 1000,
         'camera_names': ['cam_1']
     },

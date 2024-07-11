@@ -3,25 +3,23 @@ import collections
 import dm_env
 
 from robot.constants_robot import DT, NUM_JOINTS
-from robot.recorder import Recorder
-from robot.robot_utils import ImageRecorder
+from robot.recorder import Recorder, ImageRecorder
 
 class RealEnv:
     """
     Environment for real robot
 
-    Action space:      [arm_qpos (NUM_JOINTS)]                       # absolute joint positions
+    Action space:      [arm_qpos (NUM_JOINTS)]                         # absolute joint positions
 
-    Observation space:  "qpos": Concat[ left_arm_qpos (NUM_JOINTS) ] # absolute joint positions
-                        "qvel": Concat[ left_arm_qvel (NUM_JOINTS) ] # absolute joint velocities (rad)
-                        "images": {"cam_high": (480x640x3),          # h, w, c, dtype='uint8'
-                                   "cam_low": (480x640x3)}           # h, w, c, dtype='uint8'
+    Observation space:  "qpos": Concat[ robot_joint_pos (NUM_JOINTS) ] # absolute joint positions
+                        "qvel": Concat[ robot_joint_vel (NUM_JOINTS) ] # absolute joint velocities (rad)
+                        "images": {"cam_1": (480x640x3)}               # h, w, c, dtype='uint8'
     """
 
-    def __init__(self):
-        # Create robot joint data reader
+    def __init__(self, camera_names):
+        # Create robot joint data reader recorder, and camera image recorder
         self.recorder = Recorder()
-        #self.image_recorder = ImageRecorder(init_node=False)
+        self.image_recorder = ImageRecorder(camera_names)
 
     def get_action(self):
         # Action is NUM_JOINTS number of values
@@ -32,7 +30,6 @@ class RealEnv:
         obs = collections.OrderedDict()
         obs['qpos'] = self.get_qpos()
         obs['qvel'] = self.get_qvel()
-        obs['effort'] = self.get_effort()
         obs['images'] = self.get_images()
         return obs
 
@@ -44,11 +41,8 @@ class RealEnv:
     def get_qvel(self):
         return [0, 0, 0]
 
-    def get_effort(self):
-        return [0, 0, 0]
-
     def get_images(self):
-        return [] #self.image_recorder.get_images()
+        return self.image_recorder.get_images()
 
     def get_reward(self):
         return 0
@@ -75,7 +69,7 @@ class RealEnv:
             observation=self.get_observation())
 
 
-def make_real_env():
-    env = RealEnv()
+def make_real_env(camera_names = []):
+    env = RealEnv(camera_names)
     return env
 

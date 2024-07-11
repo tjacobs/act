@@ -35,7 +35,7 @@ def capture_one_episode(dt, max_timesteps, camera_names, dataset_dir, dataset_na
     print(f'Recording: {dataset_name}')
 
     # Set up connection to real robot
-    env = make_real_env()
+    env = make_real_env(camera_names)
 
     # Check files
     if not os.path.isdir(dataset_dir): os.makedirs(dataset_dir)
@@ -83,11 +83,10 @@ def capture_one_episode(dt, max_timesteps, camera_names, dataset_dir, dataset_na
     data_dict = {
         '/observations/qpos': [],
         '/observations/qvel': [],
-        '/observations/effort': [],
         '/action': [],
     }
-    #for cam_name in camera_names:
-    #    data_dict[f'/observations/images/{cam_name}'] = []
+    for cam_name in camera_names:
+        data_dict[f'/observations/images/{cam_name}'] = []
 
     # Put in data dictionary
     while actions:
@@ -95,9 +94,8 @@ def capture_one_episode(dt, max_timesteps, camera_names, dataset_dir, dataset_na
         ts = timesteps.pop(0)
         data_dict['/observations/qpos'].append(ts.observation['qpos'])
         data_dict['/observations/qvel'].append(ts.observation['qvel'])
-        data_dict['/observations/effort'].append(ts.observation['effort'])
         data_dict['/action'].append(action)
-        #for cam_name in camera_names: data_dict[f'/observations/images/{cam_name}'].append(ts.observation['images'][cam_name])
+        for cam_name in camera_names: data_dict[f'/observations/images/{cam_name}'].append(ts.observation['images'][cam_name])
 
     # Save to HDF5 file
     t0 = time.time()
@@ -105,13 +103,12 @@ def capture_one_episode(dt, max_timesteps, camera_names, dataset_dir, dataset_na
         root.attrs['sim'] = False
         obs = root.create_group('observations')
         image = obs.create_group('images')
-        #for cam_name in camera_names:
-        #    _ = image.create_dataset(cam_name, (max_timesteps, 480, 640, 3), dtype='uint8', chunks=(1, 480, 640, 3), )
+        for cam_name in camera_names:
+            _ = image.create_dataset(cam_name, (max_timesteps, 480, 640, 3), dtype='uint8', chunks=(1, 480, 640, 3), )
             # compression='gzip',compression_opts=2,)
             # compression=32001, compression_opts=(0, 0, 0, 0, 9, 1, 1), shuffle=False)
         _ = obs.create_dataset('qpos', (max_timesteps, NUM_JOINTS))
         _ = obs.create_dataset('qvel', (max_timesteps, NUM_JOINTS))
-        _ = obs.create_dataset('effort', (max_timesteps, NUM_JOINTS))
         _ = root.create_dataset('action', (max_timesteps, NUM_JOINTS))
         for name, array in data_dict.items(): root[name][...] = array
         print(f"Saved: {dataset_path}.hdf5")
