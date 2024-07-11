@@ -116,7 +116,7 @@ def main(args):
         # Save best checkpoint
         ckpt_path = os.path.join(ckpt_dir, f'policy_best.ckpt')
         torch.save(best_state_dict, ckpt_path)
-        print(f'Best checkpoint, val loss {min_val_loss:.6f} @ epoch{best_epoch}')
+        print(f'Best checkpoint, validation loss {min_val_loss:.6f} @ epoch{best_epoch}')
 
 
 # Evaluate a policy by running it
@@ -141,9 +141,8 @@ def evaluate_policy(config, ckpt_name, save_episode=True):
 
     # Load policy
     ckpt_path = os.path.join(ckpt_dir, ckpt_name)
-    print("Making policy:")
     policy = make_policy(policy_class, policy_config)
-    print("Loading:")
+    print("Loading data:")
     if torch.cuda.is_available():
         loading_status = policy.load_state_dict(torch.load(ckpt_path, weights_only=True))
     else:
@@ -335,10 +334,8 @@ def train_policy(train_dataloader, val_dataloader, config):
 
     # Create the policy and optimizer
     policy = make_policy(policy_class, policy_config)
-    if torch.cuda.is_available():
-        policy.cuda()
+    if torch.cuda.is_available(): policy.cuda()
     optimizer = make_optimizer(policy_class, policy)
-    print("")
 
     # Init
     train_history = []
@@ -355,7 +352,9 @@ def train_policy(train_dataloader, val_dataloader, config):
             policy.eval()
             epoch_dicts = []
             for batch_idx, data in enumerate(val_dataloader):
+                print("Got to here")
                 forward_dict = forward_pass(data, policy)
+                print("Not to here")
                 epoch_dicts.append(forward_dict)
             epoch_summary = compute_dict_mean(epoch_dicts)
             validation_history.append(epoch_summary)
@@ -444,18 +443,14 @@ def forward_pass(data, policy):
 
 
 def make_policy(policy_class, policy_config):
-    if policy_class == 'ACT':
-        policy = ACTPolicy(policy_config)
-    else:
-        raise NotImplementedError
+    if policy_class == 'ACT': policy = ACTPolicy(policy_config)
+    else: raise NotImplementedError
     return policy
 
 
 def make_optimizer(policy_class, policy):
-    if policy_class == 'ACT':
-        optimizer = policy.configure_optimizers()
-    else:
-        raise NotImplementedError
+    if policy_class == 'ACT': optimizer = policy.configure_optimizers()
+    else: raise NotImplementedError
     return optimizer
 
 

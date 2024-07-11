@@ -6,9 +6,6 @@ import numpy as np
 import torch
 from .models import build_ACT_model, build_CNNMLP_model
 
-import IPython
-e = IPython.embed
-
 def get_args_parser():
     parser = argparse.ArgumentParser('Set transformer detector', add_help=False)
     parser.add_argument('--lr', default=1e-4, type=float) # will be overridden
@@ -53,16 +50,16 @@ def get_args_parser():
                         help="Train segmentation head if the flag is provided")
 
     # repeat args in imitate_episodes just to avoid error. Will not be used
-    parser.add_argument('--eval', action='store_true')
-    parser.add_argument('--onscreen_render', action='store_true')
-    parser.add_argument('--ckpt_dir', action='store', type=str, help='ckpt_dir', required=True)
-    parser.add_argument('--policy_class', action='store', type=str, help='policy_class, capitalize', required=True)
-    parser.add_argument('--task_name', action='store', type=str, help='task_name', required=True)
-    parser.add_argument('--seed', action='store', type=int, help='seed', required=True)
-    parser.add_argument('--num_epochs', action='store', type=int, help='num_epochs', required=True)
-    parser.add_argument('--kl_weight', action='store', type=int, help='KL Weight', required=False)
-    parser.add_argument('--chunk_size', action='store', type=int, help='chunk_size', required=False)
-    parser.add_argument('--temporal_agg', action='store_true')
+    #parser.add_argument('--eval', action='store_true')
+    #parser.add_argument('--onscreen_render', action='store_true')
+    #parser.add_argument('--ckpt_dir', action='store', type=str, help='ckpt_dir', required=True)
+    #parser.add_argument('--policy_class', action='store', type=str, help='policy_class, capitalize', required=True)
+    #parser.add_argument('--task_name', action='store', type=str, help='task_name', required=True)
+    #parser.add_argument('--seed', action='store', type=int, help='seed', required=True)
+    #parser.add_argument('--num_epochs', action='store', type=int, help='num_epochs', required=True)
+    #parser.add_argument('--kl_weight', action='store', type=int, help='KL Weight', required=False)
+    #parser.add_argument('--chunk_size', action='store', type=int, help='chunk_size', required=False)
+    #parser.add_argument('--temporal_agg', action='store_true')
 
     return parser
 

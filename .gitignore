@@ -4,6 +4,7 @@ wandb
 outputs
 data
 checkpoints
+trained
 data_local
 .vscode
 _wandb
