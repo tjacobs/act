@@ -352,9 +352,7 @@ def train_policy(train_dataloader, val_dataloader, config):
             policy.eval()
             epoch_dicts = []
             for batch_idx, data in enumerate(val_dataloader):
-                print("Got to here")
                 forward_dict = forward_pass(data, policy)
-                print("Not to here")
                 epoch_dicts.append(forward_dict)
             epoch_summary = compute_dict_mean(epoch_dicts)
             validation_history.append(epoch_summary)

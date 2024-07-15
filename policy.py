@@ -13,14 +13,16 @@ class ACTPolicy(nn.Module):
         self.optimizer = optimizer
         self.kl_weight = args_override['kl_weight']
 
+    # Run training or inference forward pass
     def __call__(self, qpos, image, actions=None, is_pad=None):
         env_state = None
         normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
         image = normalize(image)
-        if actions is not None: # training time
+        if actions is not None: # Training time if we already know actions
             actions = actions[:, :self.model.num_queries]
             is_pad = is_pad[:, :self.model.num_queries]
 
+            # Run model
             a_hat, is_pad_hat, (mu, logvar) = self.model(qpos, image, env_state, actions, is_pad)
             total_kld, dim_wise_kld, mean_kld = kl_divergence(mu, logvar)
             loss_dict = dict()
@@ -41,14 +43,10 @@ class ACTPolicy(nn.Module):
 def kl_divergence(mu, logvar):
     batch_size = mu.size(0)
     assert batch_size != 0
-    if mu.data.ndimension() == 4:
-        mu = mu.view(mu.size(0), mu.size(1))
-    if logvar.data.ndimension() == 4:
-        logvar = logvar.view(logvar.size(0), logvar.size(1))
-
+    if mu.data.ndimension() == 4: mu = mu.view(mu.size(0), mu.size(1))
+    if logvar.data.ndimension() == 4: logvar = logvar.view(logvar.size(0), logvar.size(1))
     klds = -0.5 * (1 + logvar - mu.pow(2) - logvar.exp())
     total_kld = klds.sum(1).mean(0, True)
     dimension_wise_kld = klds.mean(0)
     mean_kld = klds.mean(1).mean(0, True)
-
     return total_kld, dimension_wise_kld, mean_kld
