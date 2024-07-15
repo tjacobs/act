@@ -198,32 +198,120 @@ class ImageRecorder:
         self.camera_names = camera_names
         for cam_name in self.camera_names:
             setattr(self, f'{cam_name}_image', None)
-        self.get_image("cam_1")
+
+        # Open USB camera
+        self.open_camera()
 
     def get_image(self, cam_name):
         # Get image from camera
-        width, height = 640, 480
-        b, g, r = 0x3E, 0x88, 0xE5  # Orange
-        image = np.zeros((height, width, 3), np.uint8)
-        image[:, :, 0] = b
-        image[:, :, 1] = g
-        image[:, :, 2] = r
-        #cv2.imshow("A New Image", image)
-        #cv2.waitKey(0)
+        image = self.get_camera_frame()
+        #print(image.shape)
+
+        # Test blank image
+        if False:
+            width, height = 640, 480
+            b, g, r = 0x3E, 0x88, 0xE5  # Orange
+            image = np.zeros((height, width, 3), np.uint8)
+            image[:, :, 0] = b
+            image[:, :, 1] = g
+            image[:, :, 2] = r
+            #cv2.imshow("Image", image)
+            #cv2.waitKey(0)
 
         # Save image
         setattr(self, f'{cam_name}_image', image)
 
     def get_images(self):
         image_dict = dict()
-        for cam_name in self.camera_names: image_dict[cam_name] = getattr(self, f'{cam_name}_image')
+        cam_name = "cam_1"
+        #for cam_name in self.camera_names: 
+        image_dict[cam_name] = getattr(self, f'{cam_name}_image')
         return image_dict
+
+    def open_camera(self):
+        # Open the USB camera
+        self.camera = cv2.VideoCapture(0)
+        if not self.camera.isOpened():
+            print("Error: Could not open camera")
+            return None
+
+    def get_camera_frame(self):
+        # Get camera frame
+        ret, frame = self.camera.read()
+        if not ret:
+            print("Error: Failed to capture camera image")
+            return None
+
+        # Display the frame
+        #cv2.imshow('Frame', frame)
+        #if cv2.waitKey(1) & 0xFF == ord('q'): return frame
+
+        # Return frame
+        return frame
+
+    def close_camera(self):
+        # Release the camera and close windows
+        self.camera.release()
+        cv2.destroyAllWindows()
 
 
 def find_serial_port(pattern):
     ports = glob.glob(pattern)
     if ports: return ports[0]
     else:     raise IOError(f"No serial port found for {pattern}")
+
+
+def record_video_to_numpy_array(duration=10, fps=30):
+    # Open the USB camera
+    cap = cv2.VideoCapture(0)
+    if not cap.isOpened():
+        print("Error: Could not open camera.")
+        return None
+
+    # Get the resolution
+    frame_width = int(cap.get(3))
+    frame_height = int(cap.get(4))
+    total_frames = duration * fps
+
+    # Create the matrix
+    video_array = np.empty((total_frames, frame_height, frame_width, 3), dtype=np.uint8)
+
+    # Get a frame
+    frame_count = 0
+    while frame_count < total_frames:
+        ret, frame = cap.read()
+        if not ret:
+            print("Error: Failed to capture image.")
+            break
+
+        # Store the frame in the numpy array
+        video_array[frame_count] = frame
+
+        # Display the frame
+        cv2.imshow('Frame', frame)
+
+        # Press 'q' to exit the video early
+        if cv2.waitKey(1) & 0xFF == ord('q'): break
+
+        frame_count += 1
+
+    # Release the webcam and close windows
+    cap.release()
+    cv2.destroyAllWindows()
+    return video_array
+
+
+# Test
+if False:
+    video_array = record_video_to_numpy_array(duration=10, fps=30)
+    print(f"Recorded video array shape: {video_array.shape}")
+
+# Test
+if False:
+    image_recorder = ImageRecorder("cam_1")
+    image_recorder.get_image("cam_1")
+    images = image_recorder.get_images()
+    print(images)
 
 
 if __name__ == "__main__":

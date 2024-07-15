@@ -23,7 +23,9 @@ class RealEnv:
 
     def get_action(self):
         # Action is NUM_JOINTS number of values
-        action = self.recorder.get_joint_positions()
+        action = None
+        if self.recorder is not None:
+            action = self.recorder.get_joint_positions()
         return action
 
     def get_observation(self):
@@ -34,7 +36,9 @@ class RealEnv:
         return obs
 
     def get_qpos(self):
-        qpos = self.recorder.get_joint_positions()
+        qpos = None
+        if self.recorder is not None:
+            qpos = self.recorder.get_joint_positions()
         #print(qpos)
         return qpos
 
@@ -42,6 +46,7 @@ class RealEnv:
         return [0, 0, 0]
 
     def get_images(self):
+        self.image_recorder.get_image("cam_1")
         return self.image_recorder.get_images()
 
     def get_reward(self):
