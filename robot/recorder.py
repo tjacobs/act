@@ -94,14 +94,18 @@ def read_robot_joints(ser):
     for i in range(1000):
         if ser.in_waiting > 0:
             line = ser.readline().decode('utf-8').strip()
-            numbers = line.split(',')
+            numbers = line.split(', ')
             
-            # Check if the line contains exactly two numbers
-            if len(numbers) == 2:
+            # Check if the line contains numbers
+            if len(numbers) == 6:
                 try:
                     num1 = int(numbers[0])
                     num2 = int(numbers[1])
-                    return [num1, num2, 0]
+                    num3 = int(numbers[2])
+                    num4 = int(numbers[3])
+                    num5 = int(numbers[4])
+                    num6 = int(numbers[5])
+                    return [num1, num4, 0]
                 except ValueError:
                     print(f"Invalid numbers: {line}")
             else:
