@@ -52,7 +52,7 @@ def capture_one_episode(dt, max_timesteps, camera_names, dataset_dir, dataset_na
     for t in tqdm(range(max_timesteps)):
         t0 = time.time()
         action = env.get_action() # Read robot joint positions
-        print(action)
+        print("Action: ", action)
         t1 = time.time()
         ts = env.step(action, False) # Get observations from camera
         t2 = time.time()
