@@ -122,10 +122,19 @@ def read_robot_joints(ser):
 
 def write_robot_joints(ser, values):
     [num1, num2, num3] = values
+    mult = 100
+    if num1 < 0: num1 = -num1
+    if num2 < 0: num2 = -num2
+    if num1 > 255*mult: num1 = mult
+    if num2 > 255*mult: num2 = mult
     print(f"{int(num1)}, {int(num2)}")
-    byte_array = bytearray([0x61, 0x1, 0x1, int(num1)//10, int(num2)//10, 0x0, 0x0, 0x0])
-    ser.write(byte_array)
-
+    try:
+        num1_byte = int(num1)//mult
+        num2_byte = int(num2)//mult
+        byte_array = bytearray([0x41, 0x1, 0x1, num1_byte, num2_byte, 0x0, 0x0, 0x0])
+        ser.write(byte_array)
+    except ValueError:
+        print(f"Invalid numbers: {num1} {num2}")
 
 def read_from_serial_port(ser, output_file):
     try:
