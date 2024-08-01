@@ -60,21 +60,14 @@ def capture_one_episode(dt, max_timesteps, camera_names, dataset_dir, dataset_na
         actions.append(action)
         actual_dt_history.append([t0, t1, t2])
 
-    # Check if recording was smooth
-    #freq_mean = print_dt_diagnosis(actual_dt_history)
-    #print(freq_mean)
-    #if freq_mean < 42: return False
-
     """
     For each timestep:
 
     observations
     - qpos                  (NUM_JOINTS,)         'float64'
     - qvel                  (NUM_JOINTS,)         'float64'
-    - effort                (NUM_JOINTS,)         'float64'
     - images
-        - cam_high          (480, 640, 3) 'uint8'
-        - cam_low           (480, 640, 3) 'uint8'
+        - cam_1             (480, 640, 3)         'uint8'
     
     action                  (NUM_JOINTS,)         'float64'
     """
@@ -98,13 +91,15 @@ def capture_one_episode(dt, max_timesteps, camera_names, dataset_dir, dataset_na
         for cam_name in camera_names: data_dict[f'/observations/images/{cam_name}'].append(ts.observation['images'][cam_name])
 
     # Save to HDF5 file
+    CAM_WIDTH = 1920
+    CAM_HEIGHT = 1080
     t0 = time.time()
     with h5py.File(dataset_path + '.hdf5', 'w', rdcc_nbytes=1024**2*2) as root:
         root.attrs['sim'] = False
         obs = root.create_group('observations')
         image = obs.create_group('images')
         for cam_name in camera_names:
-            _ = image.create_dataset(cam_name, (max_timesteps, 480, 640, 3), dtype='uint8', chunks=(1, 480, 640, 3), )
+            _ = image.create_dataset(cam_name, (max_timesteps, CAM_HEIGHT, CAM_WIDTH, 3), dtype='uint8', chunks=(1, CAM_HEIGHT, CAM_WIDTH, 3), )
             # compression='gzip',compression_opts=2,)
             # compression=32001, compression_opts=(0, 0, 0, 0, 9, 1, 1), shuffle=False)
         _ = obs.create_dataset('qpos', (max_timesteps, NUM_JOINTS))

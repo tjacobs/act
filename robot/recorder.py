@@ -105,6 +105,7 @@ def read_robot_joints(ser):
                     num4 = int(numbers[3])
                     num5 = int(numbers[4])
                     num6 = int(numbers[5])
+                    #print("Nums: ", num1, num2, num3, num4, num5, num6)
                     return [num1, num4, 0]
                 except ValueError:
                     print(f"Invalid numbers: {line}")
